@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Background Remover - by kumawat ji</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Montserrat', sans-serif;
+    background: #1a1a1a;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    padding: 2rem 1rem;
+    text-align: center;
+    max-width: 720px;
+  }
+  header h1 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 2.6rem;
+    color: #f05a28;
+    letter-spacing: 1.2px;
+    text-shadow: 0 3px 10px rgba(240, 90, 40, 0.5);
+  }
+  header p {
+    margin-top: 0.4rem;
+    font-weight: 400;
+    font-size: 1.25rem;
+    opacity: 0.8;
+  }
+  main {
+    background: #2e2e2e;
+    max-width: 720px;
+    width: 100%;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 0 30px rgba(240,90,40,0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #upload-label {
+    border: 3px dashed #f05a28;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 480px;
+    height: 250px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #f05a28;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  #upload-label:hover {
+    background-color: rgba(240, 90, 40, 0.1);
+  }
+  #upload-input {
+    display: none;
+  }
+  #preview {
+    max-width: 480px;
+    max-height: 360px;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(240,90,40,0.5);
+    margin-bottom: 1rem;
+  }
+  #btn-remove {
+    background-color: #f05a28;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(240, 90, 40, 0.7);
+    transition: background-color 0.25s ease;
+  }
+  #btn-remove:disabled {
+    background-color: #a65228;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  #btn-download {
+    margin-top: 1rem;
+    background-color: #48c78e;
+    border: none;
+    padding: 0.6rem 1.3rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(72, 199, 142, 0.7);
+    transition: background-color 0.25s ease;
+    display: none;
+  }
+  #btn-download:hover {
+    background-color: #32a36c;
+  }
+  #status {
+    margin-top: 1rem;
+    color: #f05a28;
+    font-weight: 600;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-bottom: 2rem;
+    font-size: 0.9rem;
+    max-width: 720px;
+    width: 100%;
+    color: #bbb;
+    text-align: center;
+  }
+  a {
+    color: #f05a28;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 480px) {
+    #upload-label {
+      height: 180px;
+      font-size: 1rem;
+    }
+    #preview {
+      max-width: 90vw;
+      max-height: 270px;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Background Remover
+    (ashish kumawat)
+  </h1>
+  <p>Upload an image and remove its background instantly. Powered by kumawat sahab</p>
+</header>
+<main>
+  <label id="upload-label" for="upload-input">Click or drag and drop an image here to upload</label>
+  <input type="file" id="upload-input" accept="image/*" />
+  <img id="preview" alt="Image preview" style="display:none;" />
+  <button id="btn-remove" disabled>Remove Background</button>
+  <a id="btn-download" href="#" download="no-background.png">Download Result</a>
+  <div id="status"></div>
+</main>
+<footer>
+  Your image is processed safely through the kumawat sahab.<br />
+  Make sure your backend server is running and accessible.
+</footer>
+<script>
+  const uploadInput = document.getElementById('upload-input');
+  const preview = document.getElementById('preview');
+  const removeBtn = document.getElementById('btn-remove');
+  const downloadLink = document.getElementById('btn-download');
+  const statusText = document.getElementById('status');
+  const uploadLabel = document.getElementById('upload-label');
+
+  let uploadedImageFile = null;
+  let resultBlobUrl = null;
+
+  uploadLabel.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadLabel.style.backgroundColor = 'rgba(240, 90, 40, 0.1)';
+  });
+  uploadLabel.addEventListener('dragleave', (e) => {
+    uploadLabel.style.backgroundColor = '';
+  });
+  uploadLabel.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadLabel.style.backgroundColor = '';
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  uploadInput.addEventListener('change', () => {
+    if (uploadInput.files && uploadInput.files[0]) {
+      handleFile(uploadInput.files[0]);
+    }
+  });
+
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload a valid image file.');
+      return;
+    }
+    uploadedImageFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      removeBtn.disabled = false;
+      downloadLink.style.display = 'none';
+      statusText.textContent = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeBtn.addEventListener('click', async () => {
+    if (!uploadedImageFile) return;
+
+    removeBtn.disabled = true;
+    statusText.textContent = 'Removing background... Please wait.';
+    downloadLink.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('image_file', uploadedImageFile);
+
+    try {
+      // Change this URL to your actual backend IP and port
+      const response = await fetch('http://192.168.0.30:5000/remove-background', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorJson = await response.json().catch(() => null);
+        let msg = errorJson?.error || 'Something went wrong';
+        statusText.textContent = `Error: ${msg}`;
+        removeBtn.disabled = false;
+        return;
+      }
+
+      const blob = await response.blob();
+
+      if (resultBlobUrl) {
+        URL.revokeObjectURL(resultBlobUrl);
+      }
+      resultBlobUrl = URL.createObjectURL(blob);
+
+      preview.src = resultBlobUrl;
+      downloadLink.href = resultBlobUrl;
+      downloadLink.style.display = 'inline-block';
+      statusText.textContent = 'Background removed! Download your image below.';
+    } catch (error) {
+      statusText.textContent = 'Network error during background removal. Please try again.';
+    } finally {
+      removeBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
